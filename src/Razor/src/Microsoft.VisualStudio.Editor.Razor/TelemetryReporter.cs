@@ -6,9 +6,13 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Composition;
 using System.Diagnostics;
+using System.Diagnostics.Contracts;
 using System.Linq;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Telemetry;
+using Newtonsoft.Json.Linq;
+using StreamJsonRpc;
 
 namespace Microsoft.AspNetCore.Razor.Telemetry;
 
@@ -17,19 +21,16 @@ namespace Microsoft.AspNetCore.Razor.Telemetry;
 internal class TelemetryReporter : ITelemetryReporter
 {
     private readonly ImmutableArray<TelemetrySession> _telemetrySessions;
-    private readonly IEnumerable<IFaultExceptionHandler> _faultExceptionHandlers;
     private readonly ILogger? _logger;
 
     [ImportingConstructor]
     public TelemetryReporter(
-        [Import(AllowDefault = true)] ILoggerFactory? loggerFactory = null,
-        [ImportMany] IEnumerable<IFaultExceptionHandler>? faultExceptionHandlers = null)
+        [Import(AllowDefault = true)] ILoggerFactory? loggerFactory = null)
     {
         // Get the DefaultSession for telemetry. This is set by VS with
         // TelemetryService.SetDefaultSession and provides the correct
         // appinsights keys etc
         _telemetrySessions = ImmutableArray.Create(TelemetryService.DefaultSession);
-        _faultExceptionHandlers = faultExceptionHandlers ?? Array.Empty<IFaultExceptionHandler>();
         _logger = loggerFactory?.CreateLogger<TelemetryReporter>();
     }
 
@@ -71,22 +72,9 @@ internal class TelemetryReporter : ITelemetryReporter
                 return;
             }
 
-            var handled = false;
-            foreach (var handler in _faultExceptionHandlers)
+            if (exception is RemoteInvocationException remoteInvocationException)
             {
-                if (handler.HandleException(this, exception, message, @params))
-                {
-                    // This behavior means that each handler still gets a chance
-                    // to respond to the exception. There's no real reason for this other
-                    // than best guess. When it was added, there was only one handler but
-                    // it was intended to be easy to add more.
-                    handled = true;
-                }
-            }
 
-            if (handled)
-            {
-                return;
             }
 
             var currentProcess = Process.GetCurrentProcess();
@@ -207,4 +195,47 @@ internal class TelemetryReporter : ITelemetryReporter
             Severity.High => TelemetrySeverity.High,
             _ => throw new InvalidOperationException($"Unknown severity: {severity}")
         };
+
+    public IDisposable StartEventScope(string name, Severity severity)
+    {
+        return new TelemetryScope(this, name, severity, ImmutableDictionary<string, object?>.Empty);
+    }
+
+    public IDisposable StartEventScope<T>(string name, Severity severity, ImmutableDictionary<string, T> values)
+    {
+        return new TelemetryScope(this, name, severity, values.ToImmutableDictionary((tuple) => tuple.Key, (tuple) => (object?)tuple.Value));
+    }
+
+    private class TelemetryScope : IDisposable
+    {
+        private readonly ITelemetryReporter _telemetryReporter;
+        private string _name;
+        private Severity _severity;
+        private ImmutableDictionary<string, object?> _values;
+        private bool _disposed;
+        private Stopwatch _stopwatch;
+
+        public TelemetryScope(ITelemetryReporter telemetryReporter, string name, Severity severity, ImmutableDictionary<string, object?> values)
+        {
+            _telemetryReporter = telemetryReporter;
+            _name = name;
+            _severity = severity;
+            _values = values;
+            _stopwatch = Stopwatch.StartNew();
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+
+            _stopwatch.Stop();
+            var values = _values.Add("duration", _stopwatch.ElapsedMilliseconds);
+            _telemetryReporter.ReportEvent(_name, _severity, values);
+        }
+    }
 }

@@ -2,8 +2,11 @@
 // Licensed under the MIT license. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Razor.Telemetry;
 using Microsoft.VisualStudio.LanguageServer.Protocol;
 
 namespace Microsoft.AspNetCore.Razor.LanguageServer;
@@ -16,8 +19,9 @@ internal class DefaultClientNotifierService : ClientNotifierServiceBase
 {
     private readonly TaskCompletionSource<bool> _initializedCompletionSource;
     private readonly StreamJsonRpc.JsonRpc _jsonRpc;
+    private readonly ITelemetryReporter? _telemetryReporter;
 
-    public DefaultClientNotifierService(StreamJsonRpc.JsonRpc jsonRpc)
+    public DefaultClientNotifierService(StreamJsonRpc.JsonRpc jsonRpc, ITelemetryReporter? telemetryReporter)
     {
         if (jsonRpc is null)
         {
@@ -25,12 +29,19 @@ internal class DefaultClientNotifierService : ClientNotifierServiceBase
         }
 
         _jsonRpc = jsonRpc;
+        _telemetryReporter = telemetryReporter;
         _initializedCompletionSource = new TaskCompletionSource<bool>();
     }
 
     public override async Task<TResponse> SendRequestAsync<TParams, TResponse>(string method, TParams @params, CancellationToken cancellationToken)
     {
         await _initializedCompletionSource.Task;
+
+        using var _ = _telemetryReporter?.StartEventScope("SendRequest", Severity.Normal, new Dictionary<string, object?>()
+        {
+            {"method", method },
+            { "params", @params}
+        }.ToImmutableDictionary());
         var result = await _jsonRpc.InvokeAsync<TResponse>(method, @params);
 
         return result;
