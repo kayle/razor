@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Razor.LanguageServer.FindAllReferences;
 using Microsoft.AspNetCore.Razor.LanguageServer.Folding;
 using Microsoft.AspNetCore.Razor.LanguageServer.Implementation;
 using Microsoft.AspNetCore.Razor.LanguageServer.LinkedEditingRange;
+using Microsoft.AspNetCore.Razor.LanguageServer.ProjectContext;
 using Microsoft.AspNetCore.Razor.LanguageServer.Refactoring;
 using Microsoft.AspNetCore.Razor.LanguageServer.SignatureHelp;
 using Microsoft.AspNetCore.Razor.LanguageServer.WrapWithTag;
@@ -182,6 +183,7 @@ internal class RazorLanguageServer : AbstractLanguageServer<RazorRequestContext>
             services.AddRegisteringHandler<FoldingRangeEndpoint>();
             services.AddRegisteringHandler<ValidateBreakpointRangeEndpoint>();
             services.AddRegisteringHandler<FindAllReferencesEndpoint>();
+            services.AddRegisteringHandler<ProjectContextEndpoint>();
         }
     }
 
