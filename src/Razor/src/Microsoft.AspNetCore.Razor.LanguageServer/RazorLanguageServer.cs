@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Razor.LanguageServer.Debugging;
 using Microsoft.AspNetCore.Razor.LanguageServer.Definition;
 using Microsoft.AspNetCore.Razor.LanguageServer.DocumentColor;
 using Microsoft.AspNetCore.Razor.LanguageServer.DocumentHighlighting;
+using Microsoft.AspNetCore.Razor.LanguageServer.DocumentSymbol;
 using Microsoft.AspNetCore.Razor.LanguageServer.EndpointContracts;
 using Microsoft.AspNetCore.Razor.LanguageServer.Extensions;
 using Microsoft.AspNetCore.Razor.LanguageServer.FindAllReferences;
@@ -184,6 +185,7 @@ internal class RazorLanguageServer : AbstractLanguageServer<RazorRequestContext>
             services.AddRegisteringHandler<ValidateBreakpointRangeEndpoint>();
             services.AddRegisteringHandler<FindAllReferencesEndpoint>();
             services.AddRegisteringHandler<ProjectContextEndpoint>();
+            services.AddRegisteringHandler<DocumentSymbolEndpoint>();
         }
     }
 

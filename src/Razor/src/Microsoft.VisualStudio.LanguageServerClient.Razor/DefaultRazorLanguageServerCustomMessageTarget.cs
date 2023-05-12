@@ -1115,7 +1115,7 @@ internal class DefaultRazorLanguageServerCustomMessageTarget : RazorLanguageServ
     public override Task<VSInternalReferenceItem[]?> ReferencesAsync(DelegatedPositionParams request, CancellationToken cancellationToken)
         => DelegateTextDocumentPositionRequestAsync<VSInternalReferenceItem[]>(request, Methods.TextDocumentReferencesName, cancellationToken);
 
-    public override async Task<RazorPullDiagnosticResponse?> DiagnosticsAsync(DelegatedDiagnosticParams request, CancellationToken cancellationToken)
+    public override async Task<RazorPullDiagnosticResponse?> DiagnosticsAsync(DelegatedDocumentParams request, CancellationToken cancellationToken)
     {
         var csharpTask = Task.Run(() => GetVirtualDocumentPullDiagnosticsAsync<CSharpVirtualDocumentSnapshot>(request.HostDocument, RazorLSPConstants.RazorCSharpLanguageServerName, cancellationToken), cancellationToken);
         var htmlTask = Task.Run(() => GetVirtualDocumentPullDiagnosticsAsync<HtmlVirtualDocumentSnapshot>(request.HostDocument, RazorLSPConstants.HtmlLanguageServerName, cancellationToken), cancellationToken);
@@ -1141,6 +1141,58 @@ internal class DefaultRazorLanguageServerCustomMessageTarget : RazorLanguageServ
         }
 
         return new RazorPullDiagnosticResponse(csharpDiagnostics, htmlDiagnostics);
+    }
+
+    public override async Task<SymbolInformation[]?> DocumentSymbolsAsync(DelegatedDocumentParams request, CancellationToken cancellationToken)
+    {
+        var (synchronized, virtualDocument) = await _documentSynchronizer.TrySynchronizeVirtualDocumentAsync<CSharpVirtualDocumentSnapshot>(
+            request.HostDocument.Version,
+            request.HostDocument.Uri,
+            cancellationToken).ConfigureAwait(false);
+
+        if (!synchronized)
+        {
+            return null;
+        }
+
+        var response = await _requestInvoker.ReinvokeRequestOnServerAsync<DocumentSymbolParams, SumType<DocumentSymbol, SymbolInformation>[]>(
+            virtualDocument.Snapshot.TextBuffer,
+            Methods.TextDocumentDocumentSymbolName,
+            RazorLSPConstants.RazorCSharpLanguageServerName,
+            new DocumentSymbolParams()
+            {
+                TextDocument = new TextDocumentIdentifier() { Uri = virtualDocument.Uri }
+            },
+            cancellationToken);
+
+        if (response?.Response is null or [{ Value: null }, ..])
+        {
+            return null;
+        }
+
+        var symbolInformations = new List<SymbolInformation>();
+        foreach (var docSymbolOrSymbolInfo in response.Response)
+        {
+            if (docSymbolOrSymbolInfo.TryGetFirst(out var documentSymbol))
+            {
+                AddDocSymbol(documentSymbol, symbolInformations);
+            }
+            else if (docSymbolOrSymbolInfo.TryGetSecond(out var symbolInformation))
+            {
+                symbolInformations.Add(symbolInformation);
+            }
+            else
+            {
+                throw new InvalidOperationException();
+            }
+        }
+
+        return symbolInformations.ToArray();
+
+        static void AddDocSymbol(DocumentSymbol documentSymbol, List<SymbolInformation> symbolInformations)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     private async Task<VSInternalDiagnosticReport[]?> GetVirtualDocumentPullDiagnosticsAsync<TVirtualDocumentSnapshot>(VersionedTextDocumentIdentifier hostDocument, string delegatedLanguageServerName, CancellationToken cancellationToken)

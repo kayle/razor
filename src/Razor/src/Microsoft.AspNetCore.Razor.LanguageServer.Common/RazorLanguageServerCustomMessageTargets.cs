@@ -28,16 +28,11 @@ internal static class RazorLanguageServerCustomMessageTargets
 
     // Still to migrate
     public const string RazorRenameEndpointName = "razor/rename";
-
     public const string RazorHoverEndpointName = "razor/hover";
-
     public const string RazorDefinitionEndpointName = "razor/definition";
-
     public const string RazorDocumentHighlightEndpointName = "razor/documentHighlight";
-
     public const string RazorSignatureHelpEndpointName = "razor/signatureHelp";
-
     public const string RazorImplementationEndpointName = "razor/implementation";
-
     public const string RazorReferencesEndpointName = "razor/references";
+    public const string RazorDocumentSymbolEndpointName = "razor/documentSymbol";
 }

@@ -142,7 +142,7 @@ public abstract class SingleServerDelegatingEndpointTestBase : LanguageServerTes
 
         private async Task<RazorPullDiagnosticResponse> HandlePullDiagnosticsAsync<TParams>(TParams @params)
         {
-            Assert.IsType<DelegatedDiagnosticParams>(@params);
+            Assert.IsType<DelegatedDocumentParams>(@params);
 
             var delegatedRequest = new VSInternalDocumentDiagnosticsParams
             {

@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Razor.LanguageServer.EndpointContracts;
@@ -14,9 +13,9 @@ using Microsoft.VisualStudio.LanguageServer.Protocol;
 namespace Microsoft.AspNetCore.Razor.LanguageServer.ProjectContext;
 
 [LanguageServerEndpoint(VSMethods.GetProjectContextsName)]
-internal sealed class ProjectContextEndpoint : IRegistrationExtension, IRazorRequestHandler<VSGetProjectContextsParams, IEnumerable<VSProjectContext>?>
+internal sealed class ProjectContextEndpoint : IRegistrationExtension, IRazorRequestHandler<VSGetProjectContextsParams, VSProjectContextList?>
 {
-    public bool MutatesSolutionState => throw new NotImplementedException();
+    public bool MutatesSolutionState => false;
 
     public RegistrationExtensionResult? GetRegistration(VSInternalClientCapabilities clientCapabilities)
         => new("_vs_projectContextProvider", options: true);
@@ -34,17 +33,23 @@ internal sealed class ProjectContextEndpoint : IRegistrationExtension, IRazorReq
         };
     }
 
-    public async Task<IEnumerable<VSProjectContext>?> HandleRequestAsync(VSGetProjectContextsParams request, RazorRequestContext requestContext, CancellationToken cancellationToken)
+    public Task<VSProjectContextList?> HandleRequestAsync(VSGetProjectContextsParams request, RazorRequestContext requestContext, CancellationToken cancellationToken)
     {
         var documentContext = requestContext.GetRequiredDocumentContext();
-        return new[]
+        var project = documentContext.Project;
+        var extensions = project.GetProjectEngine().Configuration.Extensions;
+
+        var contexts = extensions.Select(e => new VSProjectContext()
         {
-            new VSProjectContext()
-            {
-                Label = "Test",
-                Id = "Test",
-                Kind = VSProjectKind.CSharp
-            }
-        };
+            Label = e.ExtensionName,
+            Id = e.ExtensionName,
+            Kind = VSProjectKind.CSharp
+        });
+
+        return Task.FromResult<VSProjectContextList?>(new()
+        {
+            DefaultIndex = 0,
+            ProjectContexts = contexts.ToArray()
+        });
     }
 }

@@ -122,8 +122,11 @@ internal abstract class RazorLanguageServerCustomMessageTarget
     public abstract Task<Range?> ValidateBreakpointRangeAsync(DelegatedValidateBreakpointRangeParams request, CancellationToken cancellationToken);
 
     [JsonRpcMethod(RazorLanguageServerCustomMessageTargets.RazorPullDiagnosticEndpointName, UseSingleObjectParameterDeserialization = true)]
-    public abstract Task<RazorPullDiagnosticResponse?> DiagnosticsAsync(DelegatedDiagnosticParams request, CancellationToken cancellationToken);
+    public abstract Task<RazorPullDiagnosticResponse?> DiagnosticsAsync(DelegatedDocumentParams request, CancellationToken cancellationToken);
 
     [JsonRpcMethod(RazorLanguageServerCustomMessageTargets.RazorReferencesEndpointName, UseSingleObjectParameterDeserialization = true)]
     public abstract Task<VSInternalReferenceItem[]?> ReferencesAsync(DelegatedPositionParams request, CancellationToken cancellationToken);
+
+    [JsonRpcMethod(RazorLanguageServerCustomMessageTargets.RazorDocumentSymbolEndpointName, UseSingleObjectParameterDeserialization = true)]
+    public abstract Task<SymbolInformation[]?> DocumentSymbolsAsync(DelegatedDocumentParams request, CancellationToken cancellationToken);
 }

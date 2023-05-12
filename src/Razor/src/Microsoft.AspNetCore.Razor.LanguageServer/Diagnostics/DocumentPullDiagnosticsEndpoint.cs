@@ -133,8 +133,8 @@ internal class DocumentPullDiagnosticsEndpoint : IRazorRequestHandler<VSInternal
 
     private async Task<(VSInternalDiagnosticReport[]? CSharpDiagnostics, VSInternalDiagnosticReport[]? HtmlDiagnostics)> GetHtmlCSharpDiagnosticsAsync(VersionedDocumentContext documentContext, CancellationToken cancellationToken)
     {
-        var delegatedParams = new DelegatedDiagnosticParams(documentContext.Identifier);
-        var delegatedResponse = await _languageServer.SendRequestAsync<DelegatedDiagnosticParams, RazorPullDiagnosticResponse?>(
+        var delegatedParams = new DelegatedDocumentParams(documentContext.Identifier);
+        var delegatedResponse = await _languageServer.SendRequestAsync<DelegatedDocumentParams, RazorPullDiagnosticResponse?>(
             RazorLanguageServerCustomMessageTargets.RazorPullDiagnosticEndpointName,
             delegatedParams,
             cancellationToken).ConfigureAwait(false);
