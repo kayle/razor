@@ -100,13 +100,24 @@ internal abstract class TelemetryReporter : ITelemetryReporter
         }
     }
 
+    [Obsolete("Subclasses should use ReportFaultCore")]
     public void ReportFault(Exception exception, string? message, params object?[] @params)
+    {
+        if (HandleException(exception, message, @params))
+        {
+            return;
+        }
+
+        ReportFaultCore(exception, message, @params);
+    }
+
+    protected void ReportFaultCore(Exception exception, string? message, params object?[] @params)
     {
         try
         {
             if (exception is OperationCanceledException { InnerException: { } oceInnerException })
             {
-                ReportFault(oceInnerException, message, @params);
+                ReportFaultCore(oceInnerException, message, @params);
                 return;
             }
 
@@ -115,14 +126,9 @@ internal abstract class TelemetryReporter : ITelemetryReporter
                 // We (potentially) have multiple exceptions; let's just report each of them
                 foreach (var innerException in aggregateException.Flatten().InnerExceptions)
                 {
-                    ReportFault(innerException, message, @params);
+                    ReportFaultCore(innerException, message, @params);
                 }
 
-                return;
-            }
-
-            if (HandleException(exception, message, @params))
-            {
                 return;
             }
 

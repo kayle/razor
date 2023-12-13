@@ -42,11 +42,11 @@ internal class VSTelemetryReporter : TelemetryReporter
     {
         if (remoteInvocationException.InnerException is Exception innerException)
         {
-            ReportFault(innerException, "RIE: " + remoteInvocationException.Message);
+            ReportFaultCore(innerException, "RIE: " + remoteInvocationException.Message);
             return;
         }
 
-        ReportFault(
+        ReportFaultCore(
             remoteInvocationException,
             remoteInvocationException.Message,
             remoteInvocationException.ErrorCode,

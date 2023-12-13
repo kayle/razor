@@ -5,6 +5,7 @@ using System;
 using Microsoft.AspNetCore.Razor.Telemetry;
 using Microsoft.VisualStudio.Editor.Razor.Test.Shared;
 using Microsoft.VisualStudio.Telemetry;
+using StreamJsonRpc;
 using Xunit;
 
 namespace Microsoft.VisualStudio.Editor.Razor.Test;
@@ -277,4 +278,59 @@ public class TelemetryReporterTests
                 Assert.Equal(correlationId, correlationProperty.Value);
             });
     }
+#pragma warning disable CS0618 // Type or member is obsolete
+
+    [Fact]
+    public void HandleRIEWithInnerException()
+    {
+        var reporter = new TestTelemetryReporter();
+
+        var ae = new ApplicationException("expectedText");
+        var rie = new RemoteInvocationException("a", 0, ae);
+
+        var p3Value = Guid.NewGuid();
+        reporter.ReportFault(rie, rie.Message);
+
+        Assert.Collection(reporter.Events,
+            e1 =>
+            {
+                Assert.Equal(TelemetrySeverity.High, e1.Severity);
+                Assert.Equal("dotnet/razor/fault", e1.Name);
+                if (e1 is not FaultEvent faultEvent1)
+                {
+                    // faultEvent doesn't expose any interesting properties,
+                    // like the ExceptionObject, or the resulting Description,
+                    // or really anything we would explicitly want to verify against.
+                    Assert.Fail("It should be a fault event");
+                }
+            });
+    }
+
+    [Fact]
+    public void HandleRIEWithNoInnerException()
+    {
+        var reporter = new TestTelemetryReporter();
+
+        var rie = new RemoteInvocationException("a", 0, errorData: null);
+
+        var p3Value = Guid.NewGuid();
+        reporter.ReportFault(rie, rie.Message);
+
+        Assert.Collection(reporter.Events,
+            e1 =>
+            {
+                Assert.Equal(TelemetrySeverity.High, e1.Severity);
+                Assert.Equal("dotnet/razor/fault", e1.Name);
+                if (e1 is not FaultEvent faultEvent1)
+                {
+                    // faultEvent doesn't expose any interesting properties,
+                    // like the ExceptionObject, or the resulting Description,
+                    // or really anything we would explicitly want to verify against.
+                    Assert.Fail("It should be a fault event");
+                }
+            });
+    }
+
+#pragma warning restore CS0618 // Type or member is obsolete
+
 }
